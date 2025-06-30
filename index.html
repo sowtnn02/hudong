@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>湖東國小預約行事曆</title>
+    <title>活動行事曆與建議板</title>
     <!-- 引入 Tailwind CSS 以進行快速美化 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,6 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
         }
         /* 確保 iframe 在不同螢幕尺寸下都能正確縮放 */
         .calendar-container {
@@ -27,6 +28,14 @@
             width: 100%;
             height: 100%;
         }
+        /* 刪除按鈕的細微動畫效果 */
+        .delete-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .delete-btn:hover {
+            background-color: #ef4444; /* red-500 */
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -36,35 +45,173 @@
         <!-- 頁面標題 -->
         <header class="text-center mb-8">
             <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">活動行事曆</h1>
-            <p class="mt-2 text-lg text-gray-600">查看所有即將到來的活動與重要日期。</p>
+            <p class="mt-2 text-lg text-gray-600">查看所有即將到來的活動，或在下方提出您的活動建議！</p>
         </header>
 
-        <!-- Google 行事曆嵌入區域 -->
-        <main>
-            <div class="bg-white rounded-xl shadow-lg p-2 sm:p-4">
-                <div class="calendar-container rounded-lg">
-                    <!-- 
-                      這是從 Google 日曆取得的內嵌 iframe。
-                      'src' 屬性中的 cid 就是您提供的日曆ID。
-                      'ctz' 參數設定為 'Asia/Taipei' (亞洲/台北) 時區。
-                      您可以在 Google 日曆的設定中自訂更多選項，例如預設檢視模式、顏色等。
-                    -->
-                    <iframe 
-                        src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=Asia%2FTaipei&src=M2E1YzkwYzEzZDdlMjk5YjcxMzJjZjhkMDc2ZjhlMzNjZGNlNTJkMzk0OTA1ZmQ0YTlmNjRhOTM2MDFkYjY0MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5" 
-                        style="border:solid 1px #777" 
-                        frameborder="0" 
-                        scrolling="no">
-                    </iframe>
+        <!-- 主要內容區域 -->
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- 左側：Google 行事曆 -->
+            <section>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">行事曆檢視</h2>
+                <div class="bg-white rounded-xl shadow-lg p-2 sm:p-4">
+                    <div class="calendar-container rounded-lg">
+                        <iframe 
+                            src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=Asia%2FTaipei&src=M2E1YzkwYzEzZDdlMjk5YjcxMzJjZjhkMDc2ZjhlMzNjZGNlNTJkMzk0OTA1ZmQ0YTlmNjRhOTM2MDFkYjY0MUBncm91cC5jYWxlbmRhci5nb29nbGUuY29t&color=%23039BE5" 
+                            style="border:solid 1px #777" 
+                            frameborder="0" 
+                            scrolling="no">
+                        </iframe>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <!-- 右側：即時活動建議板 -->
+            <section>
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">活動建議板</h2>
+                <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                    <!-- 新增建議的表單 -->
+                    <div class="flex items-center gap-2 mb-4">
+                        <input type="text" id="suggestion-input" placeholder="輸入您的活動建議..." class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <button id="add-suggestion-btn" class="bg-blue-500 text-white font-semibold px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">新增</button>
+                    </div>
+
+                    <!-- 顯示建議的列表 -->
+                    <div id="suggestions-list" class="space-y-3 h-96 overflow-y-auto pr-2">
+                        <!-- 建議會由 JavaScript 動態插入此處 -->
+                        <p id="loading-suggestions" class="text-gray-500">正在載入建議...</p>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <!-- 頁腳 -->
-        <footer class="text-center mt-8">
-            <p class="text-gray-500">網頁由 Gemini 設計</p>
+        <footer class="text-center mt-12">
+            <p class="text-gray-500">網頁由 Gemini 搭配 Firebase 技術建置</p>
         </footer>
-
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        // 匯入 Firebase 所需的函式
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, serverTimestamp, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        
+        // --- Firebase 設定 ---
+        // 這些變數會由執行環境自動提供，請勿修改
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // 初始化 Firebase App
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- DOM 元素 ---
+        const suggestionInput = document.getElementById('suggestion-input');
+        const addSuggestionBtn = document.getElementById('add-suggestion-btn');
+        const suggestionsList = document.getElementById('suggestions-list');
+        const loadingMessage = document.getElementById('loading-suggestions');
+
+        // --- 監聽認證狀態 ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // 使用者已匿名登入，現在可以設定 Firestore 監聽器
+                console.log("匿名使用者已登入:", user.uid);
+                setupFirestoreListener();
+            } else {
+                // 使用者未登入，嘗試登入
+                console.log("使用者未登入，正在嘗試匿名登入...");
+                signInAnonymously(auth).catch((error) => {
+                    console.error("匿名登入失敗:", error);
+                    loadingMessage.textContent = '無法連線至建議服務。';
+                });
+            }
+        });
+
+        // --- 功能：設定 Firestore 監聽 ---
+        function setupFirestoreListener() {
+            const suggestionsCollection = collection(db, `/artifacts/${appId}/public/data/suggestions`);
+            const suggestionsQuery = query(suggestionsCollection);
+
+            onSnapshot(suggestionsQuery, (snapshot) => {
+                suggestionsList.innerHTML = ''; // 清空目前的列表
+                
+                if (snapshot.empty) {
+                    suggestionsList.innerHTML = '<p class="text-gray-500">目前沒有任何建議，快來新增第一筆吧！</p>';
+                } else {
+                    const sortedDocs = snapshot.docs.sort((a, b) => {
+                        const timeA = a.data().createdAt?.seconds || 0;
+                        const timeB = b.data().createdAt?.seconds || 0;
+                        return timeB - timeA; // 讓最新的在最前面
+                    });
+                    
+                    sortedDocs.forEach(doc => {
+                        const suggestion = doc.data();
+                        const suggestionId = doc.id;
+                        
+                        const div = document.createElement('div');
+                        div.className = 'bg-gray-100 p-3 rounded-md flex justify-between items-center';
+                        
+                        const p = document.createElement('p');
+                        p.textContent = suggestion.text;
+                        p.className = 'text-gray-800 break-all';
+                        
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.textContent = '刪除';
+                        deleteBtn.className = 'delete-btn text-xs text-red-500 font-semibold border border-red-300 rounded-full px-2 py-1 ml-2 flex-shrink-0';
+                        
+                        deleteBtn.onclick = () => deleteSuggestion(suggestionId);
+                        
+                        div.appendChild(p);
+                        div.appendChild(deleteBtn);
+                        suggestionsList.appendChild(div);
+                    });
+                }
+            }, (error) => {
+                console.error("監聽建議時發生錯誤:", error);
+                loadingMessage.textContent = '無法載入建議，請檢查權限或網路連線。';
+            });
+        }
+        
+        // --- 功能：新增建議 ---
+        async function addSuggestion() {
+            const text = suggestionInput.value.trim();
+            if (text === '') {
+                console.error('建議內容不能為空！');
+                return;
+            }
+            
+            const suggestionsCollection = collection(db, `/artifacts/${appId}/public/data/suggestions`);
+            try {
+                await addDoc(suggestionsCollection, {
+                    text: text,
+                    createdAt: serverTimestamp() 
+                });
+                suggestionInput.value = '';
+            } catch (e) {
+                console.error("新增文件時出錯: ", e);
+            }
+        }
+
+        // --- 功能：刪除建議 ---
+        async function deleteSuggestion(id) {
+            try {
+                await deleteDoc(doc(db, `/artifacts/${appId}/public/data/suggestions`, id));
+            } catch (e) {
+                console.error("刪除文件時出錯: ", e);
+            }
+        }
+        
+        // --- 綁定事件 ---
+        addSuggestionBtn.onclick = addSuggestion;
+        suggestionInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                addSuggestion();
+            }
+        });
+
+    </script>
 </body>
 </html>
