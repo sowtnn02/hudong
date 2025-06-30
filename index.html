@@ -99,17 +99,16 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         
         // --- Firebase 設定 ---
-        // 這些變數會由執行環境自動提供，請勿修改
+        // 請確認這裡貼上的是您自己從 Firebase 專案中複製的設定碼
         const firebaseConfig = {
-  apiKey: "AIzaSyB3Sv-UsDWCeOO0sqbBjM1Uf-ZGzraRqS4",
-  authDomain: "calendar-1eba7.firebaseapp.com",
-  projectId: "calendar-1eba7",
-  storageBucket: "calendar-1eba7.firebasestorage.app",
-  messagingSenderId: "90586349871",
-  appId: "1:90586349871:web:9ce611f47c692b223721da",
-  measurementId: "G-P6NV8PBN7E"
-}
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            apiKey: "AIzaSyB3Sv-UsDWCeOO0sqbBjM1Uf-ZGzraRqS4",
+            authDomain: "calendar-1eba7.firebaseapp.com",
+            projectId: "calendar-1eba7",
+            storageBucket: "calendar-1eba7.appspot.com",
+            messagingSenderId: "90586349871",
+            appId: "1:90586349871:web:9ce611f47c692b223721da",
+            measurementId: "G-P6NV8PBN7E"
+        };
 
         // 初始化 Firebase App
         const app = initializeApp(firebaseConfig);
@@ -140,8 +139,8 @@
 
         // --- 功能：設定 Firestore 監聽 ---
         function setupFirestoreListener() {
-            const suggestionsCollection = collection(db, `/artifacts/${appId}/public/data/suggestions`);
-            const suggestionsQuery = query(suggestionsCollection);
+            // **[修正]** 使用簡單的根集合 "suggestions"
+            const suggestionsQuery = query(collection(db, "suggestions"));
 
             onSnapshot(suggestionsQuery, (snapshot) => {
                 suggestionsList.innerHTML = ''; // 清空目前的列表
@@ -191,9 +190,9 @@
                 return;
             }
             
-            const suggestionsCollection = collection(db, `/artifacts/${appId}/public/data/suggestions`);
             try {
-                await addDoc(suggestionsCollection, {
+                // **[修正]** 使用簡單的根集合 "suggestions"
+                await addDoc(collection(db, "suggestions"), {
                     text: text,
                     createdAt: serverTimestamp() 
                 });
@@ -206,7 +205,8 @@
         // --- 功能：刪除建議 ---
         async function deleteSuggestion(id) {
             try {
-                await deleteDoc(doc(db, `/artifacts/${appId}/public/data/suggestions`, id));
+                // **[修正]** 使用簡單的根集合 "suggestions"
+                await deleteDoc(doc(db, "suggestions", id));
             } catch (e) {
                 console.error("刪除文件時出錯: ", e);
             }
