@@ -100,7 +100,15 @@
         
         // --- Firebase 設定 ---
         // 這些變數會由執行環境自動提供，請勿修改
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "YOUR_API_KEY", authDomain: "YOUR_AUTH_DOMAIN", projectId: "YOUR_PROJECT_ID" };
+        const firebaseConfig = {
+  apiKey: "AIzaSyB3Sv-UsDWCeOO0sqbBjM1Uf-ZGzraRqS4",
+  authDomain: "calendar-1eba7.firebaseapp.com",
+  projectId: "calendar-1eba7",
+  storageBucket: "calendar-1eba7.firebasestorage.app",
+  messagingSenderId: "90586349871",
+  appId: "1:90586349871:web:9ce611f47c692b223721da",
+  measurementId: "G-P6NV8PBN7E"
+}
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // 初始化 Firebase App
